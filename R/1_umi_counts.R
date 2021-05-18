@@ -1,10 +1,13 @@
 library(tidyverse)
 library(Seurat)
 library(data.table)
+library(ggrepel)
 
 #initialize lists
 hmn_umi<- lst()
 ms_umi <- lst()
+hmn_abs_umi <- lst()
+ms_abs_umi <- lst()
 
 hmn_prop<- lst()
 ms_prop <- lst()
@@ -137,8 +140,30 @@ a <- ms_jakel3 %>%
   xlim(0.5, 2.5) 
 print(a)
 
+#the absolute UMI count per celltype
+ms_jakel4 <- ms_jakel %>%
+  group_by(diagnosis,cell_type) %>%
+  summarise(abs_count = sum(UMIs))
+
+ms_jakel5 <- ms_jakel4 %>%
+  group_by(diagnosis) %>% 
+  summarise(rel_count = abs_count/sum(abs_count)) %>%
+  ungroup() %>% 
+  dplyr::select(-diagnosis) %>%
+  bind_cols(ms_jakel4)
+
+a <- ms_jakel4 %>%
+  ggplot(aes(x=diagnosis, y=abs_count, fill=reorder(cell_type, desc(abs_count)))) +
+  geom_bar(position = 'fill', stat = 'identity', color='black', lwd=0.1) +
+  theme_void() +
+  scale_fill_brewer(palette = "Dark2") +
+  coord_flip()
+print(a)
+
+
 hmn_umi[["Jakel_et_al"]] <- ms_jakel2
 hmn_prop[["Jakel_et_al"]] <- ms_jakel3
+hmn_abs_umi[["Jakel_et_al"]] <- ms_jakel5
 
 #schirmer
 schirm <- read_tsv(file.path("data", "Schirmer_MS.txt")) %>%
@@ -204,6 +229,27 @@ a <- schirm3 %>%
   xlim(0.5, 2.5) 
 print(a)
 
+#the absolute UMI count per celltype
+schirm4 <- schirm %>%
+  group_by(diagnosis,cell_type) %>%
+  summarise(abs_count = sum(UMIs))
+
+schirm5 <- schirm4 %>%
+  group_by(diagnosis) %>% 
+  summarise(rel_count = abs_count/sum(abs_count)) %>%
+  ungroup() %>% 
+  dplyr::select(-diagnosis) %>%
+  bind_cols(schirm4)
+
+a <- schirm4 %>%
+  ggplot(aes(x=diagnosis, y=abs_count, fill=reorder(cell_type, desc(abs_count)))) +
+  geom_bar(position = 'fill', stat = 'identity', color='black', lwd=0.1) +
+  theme_void() +
+  scale_fill_brewer(palette = "Dark2") +
+  coord_flip()
+print(a)
+
+hmn_abs_umi[["Schirmer_et_al."]] <- schirm5
 hmn_umi[["Schirmer_et_al."]] <- schirm2
 hmn_prop[["Schirmer_et_al."]] <- schirm3
 
@@ -272,6 +318,27 @@ a <- velm3 %>%
   xlim(0.5, 2.5) 
 print(a)
 
+#the absolute UMI count per celltype
+velm4 <- velm %>%
+  group_by(diagnosis,cell_type) %>%
+  summarise(abs_count = sum(UMIs))
+
+velm5 <- velm4 %>%
+  group_by(diagnosis) %>% 
+  summarise(rel_count = abs_count/sum(abs_count)) %>%
+  ungroup() %>% 
+  dplyr::select(-diagnosis) %>%
+  bind_cols(velm4)
+
+a <- velm4 %>%
+  ggplot(aes(x=diagnosis, y=abs_count, fill=reorder(cell_type, desc(abs_count)))) +
+  geom_bar(position = 'fill', stat = 'identity', color='black', lwd=0.1) +
+  theme_void() +
+  scale_fill_brewer(palette = "Dark2") +
+  coord_flip()
+print(a)
+
+hmn_abs_umi[["Velmeshev_et_al."]] <- velm5
 hmn_umi[["Velmeshev_et_al."]] <- velm2
 hmn_prop[["Velmeshev_et_al."]] <- velm3
 
@@ -396,6 +463,21 @@ a <- yao3 %>%
   xlim(0.5, 2.5) 
 print(a)
 
+#the absolute UMI count per celltype
+yao4 <- yao %>%
+  group_by(cell_type) %>%
+  summarise(abs_count = sum(nCount_RNA))  %>% 
+  mutate(rel_count = abs_count/sum(abs_count))
+
+a <- yao4 %>%
+  ggplot(aes(x=1, y=abs_count, fill=reorder(cell_type, desc(abs_count)))) +
+  geom_bar(position = 'fill', stat = 'identity', color='black', lwd=0.1) +
+  theme_void() +
+  scale_fill_brewer(palette = "Dark2") +
+  coord_flip()
+print(a)
+
+ms_abs_umi[["yao_et_al."]] <- yao4
 ms_umi[["Yao et al."]] <- yao2
 ms_prop[["Yao et al."]] <- yao3
 
@@ -497,8 +579,6 @@ ms_umi3  %>%
 
 ggsave(file.path("plots", "umi_dotplot_mouse.pdf"), useDingbats=F)
 
-
-Freibur9
 #plot all mice
 ms_prop2 <- ms_prop %>% 
   bind_rows(.id="Dataset") %>% 
@@ -550,5 +630,40 @@ ms_prop3  %>%
 
 ggsave(file.path("plots", "prop_dotplot_yao_et_al_mouse.pdf"), useDingbats=F)
 
+#plot the number of transcripts in humans and mice
+hmn_umi4 <- hmn_umi2
   
-  
+#plot all umis humans
+    hmn_abs_umi2 <- hmn_abs_umi %>% 
+      bind_rows(.id="Dataset") %>%
+      filter(diagnosis == "Control")
+    
+    hmn_abs_umi3 <- hmn_abs_umi2 %>% 
+      group_by(cell_type) %>% 
+      summarise(rel_count = round(mean(rel_count*100),3),
+                sd = sd(rel_count*100)) %>% 
+      mutate(species="Human")
+    
+    yao5 <- yao4 %>% 
+      mutate(species="Mouse",
+             rel_count = rel_count*100) 
+    
+    both <- hmn_abs_umi3 %>% 
+      bind_rows(yao5) %>% 
+      mutate(species=factor(species, levels=c("Mouse", "Human")))
+    
+    both  %>%
+      ggplot(aes(x=species, y=rel_count, label=round(rel_count,2), fill=reorder(cell_type, desc(rel_count)))) +
+      geom_bar(position = 'stack', stat = 'identity', color='black', lwd=0.1, width = 0.5) +
+      theme_minimal() +
+      scale_fill_brewer("Cell type",palette = "Pastel2") +
+      geom_text_repel(size =8, nudge_x = .45) +
+      coord_flip() +
+      theme(text=element_text(size=30),
+            legend.position = "bottom") + 
+      guides(fill = guide_legend(nrow = 1)) +
+      labs(y="% of UMIs", x="Species", title="Percentages of UMIs per Cell type in Single Nucleus Sequencing datasets")
+    
+    ggsave(file.path("plots","umis_per_dataset_barplot.pdf"), height=5, width = 20)
+    
+      

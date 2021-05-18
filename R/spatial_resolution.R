@@ -56,7 +56,8 @@ df %>% ggplot(aes(Protocol,Dots_per_1mmsq, group=1, fill=Protocol, label=round(D
   expand_limits(y=0) +
   scale_y_log10() +
   theme_linedraw() +
-  theme(text=element_text(size=25)) +
+  theme(text=element_text(size=25),
+        panel.grid.minor = element_blank()) +
   labs(title="Maximal number of spatially distinct data points", y="Max. dots per 1mm^2") +
   coord_flip() +
   geom_text(nudge_x = .2, size=5) +
@@ -71,8 +72,9 @@ df %>%
   expand_limits(y=0) +
   scale_y_log10() +
   theme_linedraw() +
-  theme(text=element_text(size=25)) +
-  labs(title="Expected spatial resolution", y="Resolution (µm)") +
+  theme(text=element_text(size=25),
+        panel.grid.minor = element_blank()) +
+  labs(title="Spatial resolution", y="Resolution (µm)") +
   coord_flip() +
   geom_text(nudge_x = .2, size=5) +
   scale_fill_brewer(guide=F, palette = "Set3")

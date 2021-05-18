@@ -34,6 +34,7 @@ if (!file.exists(file.path("data", "seurat_object.RData"))) {
   
   #sankowski et al
   load("/Users/romansankowski/Documents/single_cell_analysis/sankowski-et-al-microglia/data/prdata.RData")
+  load("/Users/romansankowski/Documents/single_cell_analysis/sankowski-et-al-microglia/data/metadata_ctrl.RData")
   
   whole_micr <- prdata[,df$ID]
   rownames(whole_micr) <- make.unique(gsub("_.*", "", rownames(prdata)))
@@ -73,24 +74,43 @@ if (!file.exists(file.path("data", "seurat_object.RData"))) {
   velm_et_al <- as.data.frame(as.matrix(velm_et_al[,velm$cell[velm$diagnosis=="Control" & velm$cell_type=="Microglia"]]))
   boxplot(velm_et_al["MID1",])
   
+#     Gerrits E, Heng Y, Boddeke EWGM, Eggen BJL. Transcriptional profiling of microglia; current state of the art and future perspectives. Glia 2020 Apr;68(4):740-755. PMID: 31846124
+  gerrits1 <- ReadMtx(mtx = file.path("data", "GSM4023552_Donor1nuclei_matrix.mtx.gz"), 
+                      cells = file.path("data", "GSM4023552_Donor1nuclei_barcodes.tsv.gz"),
+                      features = file.path("data", "GSM4023552_Donor1nuclei_genes.tsv.gz"))
+  
+  gerrits1 <- as.matrix(gerrits1[rowSums(gerrits1) >0, colSums(gerrits1) >200]) 
+  
+  gerrits2 <- ReadMtx(mtx = file.path("data", "GSM4023555_Donor2nuclei_matrix.mtx.gz"), 
+                      cells = file.path("data", "GSM4023555_Donor2nuclei_barcodes.tsv.gz"),
+                      features = file.path("data", "GSM4023555_Donor2nuclei_genes.tsv.gz"))
+  gerrits2 <- as.matrix(gerrits2[rowSums(gerrits2) >0, colSums(gerrits2) >200]) 
+  
+  gerrits_et_al <- merge(gerrits1, gerrits2, by=0)
+  rownames(gerrits_et_al) <- gerrits_et_al$Row.names
+  gerrits_et_al$Row.names <- NULL
+  boxplot(gerrits_et_al["MID1",])
+  
   #run seurat
   #all
   all <- list(
     "whole_cells" = whole_micr,
     "Jakel_et_al" = jakel_umis,
     "Schirmer_et_al" = schirmer_et_al,
-    "Velm_et_al" = velm_et_al
+    "Velm_et_al" = velm_et_al,
+    "Gerrits_et_al" = gerrits_et_al
   )
   
   all <- all %>% 
     map(function(x) CreateSeuratObject(counts = x, min.cells = 10, min.features = 500))
   
-  all <- merge(x=all[[1]], y=c(all[[2]], all[[3]], all[[4]]),add.cell.ids = c("whole_cells", "Jakel_et_al", "Schirmer_et_al", "Velm_et_al"))
+  all <- merge(x=all[[1]], y=c(all[[2]], all[[3]], all[[4]], all[[5]]),add.cell.ids = c("whole_cells", "Jakel_et_al", "Schirmer_et_al", "Velm_et_al", "Gerrits_et_al"))
   
   all$dataset <- case_when(
     grepl("whole_cells", colnames(all))  ~ "whole_cells",
     grepl("Jakel_et_al", colnames(all))  ~ "Jakel_et_al",
     grepl("Schirmer_et_al", colnames(all))  ~ "Schirmer_et_al",
+    grepl("Gerrits_et_al", colnames(all))  ~ "Gerrits_et_al",
     T  ~ "Velm_et_al",
     
   )
